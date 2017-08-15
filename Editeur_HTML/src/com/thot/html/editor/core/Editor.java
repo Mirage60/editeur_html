@@ -1,6 +1,18 @@
 package com.thot.html.editor.core;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.SortedMap;
+
 import com.thot.html.editor.interfaces.IEditor;
+import com.thot.html.editor.utils.FileUtils;
 
 import javafx.application.Application;
 import javafx.collections.FXCollections;
@@ -15,11 +27,15 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Accordion;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
@@ -34,6 +50,8 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.web.HTMLEditor;
+import javafx.stage.FileChooser;
+import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
@@ -57,8 +75,12 @@ public final class Editor extends Application implements IEditor
 
 	private static final ColumnConstraints leftConstraint = new ColumnConstraints();
 	private static final ColumnConstraints rightConstraint = new ColumnConstraints();
+	private final EventHandler<WindowEvent> onExitEventHandler = new OnExitEventHandler();
+	private final Map<FIELD_ID,Node> fields = new Hashtable<>();
 	private Stage stage = null;
 	private Scene scene = null;
+	private boolean isClosing = false;
+	private File defaultDirectory = FileUtils.getUserHome();
 
 	static
 	{
@@ -103,6 +125,44 @@ public final class Editor extends Application implements IEditor
 
 	}
 
+	public final Charset getCharset() throws Exception
+	{
+
+ 		final FIELD_ID fieldID = FIELD_ID.CHARSET;
+
+ 		final Node node = (this.fields == null ? 0 : this.fields.size()) == 0 ? null : this.fields.containsKey(fieldID) ? this.fields.get(fieldID) : null;
+
+ 		final ChoiceBox<?> selector = node == null ? null : node instanceof ChoiceBox ? (ChoiceBox<?>) node : null;
+
+ 		if (selector == null) throw new Exception("Failed to retrieve selector instance");
+
+ 		final Object value = selector.getValue();
+
+ 		String valueStr = value == null ? "" : value.toString();
+
+ 		valueStr = valueStr == null ? "" : valueStr.trim();
+
+ 		return "".equals(valueStr) ? null : Charset.forName(valueStr);
+
+	}
+
+	public final String getHTML() throws Exception
+	{
+
+ 		final FIELD_ID fieldID = FIELD_ID.HTML_EDITOR;
+
+ 		final Node node = (this.fields == null ? 0 : this.fields.size()) == 0 ? null : this.fields.containsKey(fieldID) ? this.fields.get(fieldID) : null;
+
+ 		final HTMLEditor htmlEditor = node == null ? null : node instanceof HTMLEditor ? (HTMLEditor) node : null;
+
+ 		if (htmlEditor == null) throw new Exception("Failed to retrieve HTML editor instance");
+
+ 		final String html = htmlEditor.getHtmlText();
+
+ 		return html == null ? "" : html.trim();
+
+	}
+
 	private final StackPane createStackPane()
 	{
 
@@ -117,8 +177,13 @@ public final class Editor extends Application implements IEditor
 
 			final HTMLEditor htmlEditor = new HTMLEditor();
 
-			htmlEditor.setEffect(new DropShadow(5,4,4,Color.GRAY));
-			htmlEditor.setPadding(new Insets(0));
+			final FIELD_ID htmlEditorFieldID = FIELD_ID.HTML_EDITOR;
+
+			htmlEditor.setEffect   (new DropShadow(5,4,4,Color.GRAY));
+			htmlEditor.setPadding  (new Insets(0)                   );
+			htmlEditor.setUserData (htmlEditorFieldID               );
+
+			this.fields.put(htmlEditorFieldID,htmlEditor);
 
 		    children.add(htmlEditor);
 
@@ -149,12 +214,48 @@ public final class Editor extends Application implements IEditor
 		titledPane.setPrefHeight (400                       );
 		titledPane.setUserData   (WIDGET_ID.PREFERENCES_PANE);
 
-		final Pane gridPane = new GridPane();
+		final GridPane gridPane = new GridPane();
 
 		final ObservableList<Node> children = gridPane.getChildren();
 
 		if (children != null)
 		{
+
+			gridPane.setPadding (GRID_PADDING      );
+			gridPane.setHgap    (HORIZONTAL_SPACING);
+			gridPane.setVgap    (VERTICAL_SPACING  );
+
+			gridPane.getColumnConstraints().addAll(leftConstraint,rightConstraint);
+
+	        final Label charsetLabel = new Label("Jeu de caractères :");
+
+	        charsetLabel.setAlignment (Pos.CENTER_RIGHT        );
+	        charsetLabel.setMaxWidth  (Double.POSITIVE_INFINITY);
+
+	        final FIELD_ID charsetFieldID = FIELD_ID.CHARSET;
+
+	        final SortedMap<String,Charset> charsets = Charset.availableCharsets();
+
+	        final int itemCount = charsets == null ? 0 : charsets.size();
+
+	        final List<String> list = itemCount == 0 ? new ArrayList<>() : new ArrayList<>(charsets.keySet());
+
+			final ObservableList<String> charsetItems = FXCollections.observableArrayList(list);
+
+			String value = DEFAULT_CHARSET == null ? "" : DEFAULT_CHARSET.name();
+
+			value = value == null ? "" : value.trim();
+
+	        final ChoiceBox<String> charsetField = new ChoiceBox<>(charsetItems);
+
+	        charsetField.setPrefWidth (400           );
+	        charsetField.setUserData  (charsetFieldID);
+	        charsetField.setDisable   (itemCount == 0);
+	        charsetField.setValue     (value         );
+
+	        this.fields.put(charsetFieldID,charsetField);
+
+	        gridPane.addRow(0,charsetLabel,charsetField);
 
 		}
 
@@ -191,10 +292,14 @@ public final class Editor extends Application implements IEditor
 	        descriptionLabel.setAlignment (Pos.CENTER_RIGHT        );
 	        descriptionLabel.setMaxWidth  (Double.POSITIVE_INFINITY);
 
+	        final FIELD_ID descriptionFieldID = FIELD_ID.DESCRIPTION;
+
 	        final TextArea descriptionField = new TextArea();
 
-	        descriptionField.setPrefWidth (400                 );
-	        descriptionField.setUserData  (FIELD_ID.DESCRIPTION);
+	        descriptionField.setPrefWidth (400               );
+	        descriptionField.setUserData  (descriptionFieldID);
+
+	        this.fields.put(descriptionFieldID,descriptionField);
 
 	        gridPane.addRow(0,descriptionLabel,descriptionField);
 
@@ -236,8 +341,12 @@ public final class Editor extends Application implements IEditor
 
 	        final TextField sendToField = new TextField();
 
-	        sendToField.setPrefWidth (400             );
-	        sendToField.setUserData  (FIELD_ID.SEND_TO);
+	        final FIELD_ID sendToFieldID = FIELD_ID.SEND_TO;
+
+	        sendToField.setPrefWidth (400          );
+	        sendToField.setUserData  (sendToFieldID);
+
+	        this.fields.put(sendToFieldID,sendToField);
 
 	        gridPane.addRow(0,sendTo,sendToField);
 
@@ -250,8 +359,12 @@ public final class Editor extends Application implements IEditor
 
 	        final TextField subjectField = new TextField();
 
-	        subjectField.setPrefWidth (400             );
-	        subjectField.setUserData  (FIELD_ID.SUBJECT);
+	        final FIELD_ID subjectFieldID = FIELD_ID.SUBJECT;
+
+	        subjectField.setPrefWidth (400           );
+	        subjectField.setUserData  (subjectFieldID);
+
+	        this.fields.put(subjectFieldID,subjectField);
 
 	        GridPane.setConstraints(subjectField,1,1);
 
@@ -288,6 +401,76 @@ public final class Editor extends Application implements IEditor
 
 	}
 
+	private final MenuItem createSaveMenuItem()
+	{
+
+		final MenuItem menuItem = new MenuItem();
+
+		menuItem.setText     ("Enregistrer"   );
+		menuItem.setUserData (MENUITEM_ID.SAVE);
+
+		menuItem.setOnAction(new EventHandler<ActionEvent>()
+		{
+
+			@Override
+			public final void handle(final ActionEvent event)
+			{
+
+				try
+				{
+
+				}
+				catch (final Throwable exception)
+				{
+
+					Logger.log(exception);
+
+				}
+
+			}
+
+		});
+
+		return menuItem;
+
+	}
+
+	private final MenuItem createSaveAsMenuItem()
+	{
+
+		final MenuItem menuItem = new MenuItem();
+
+		menuItem.setText     ("Enregistrer sous\u2026");
+		menuItem.setUserData (MENUITEM_ID.SAVE_AS     );
+
+		menuItem.setOnAction(new EventHandler<ActionEvent>()
+		{
+
+			@Override
+			public final void handle(final ActionEvent event)
+			{
+
+				try
+				{
+
+					Editor.this.saveAs();
+
+				}
+				catch (final Throwable exception)
+				{
+
+					Logger.log(exception);
+
+				}
+
+			}
+
+		});
+
+		return menuItem;
+
+	}
+
 	private final MenuItem createExitMenuItem()
 	{
 
@@ -306,14 +489,7 @@ public final class Editor extends Application implements IEditor
 				try
 				{
 
-			    	if (Editor.this.stage != null)
-			    	{
-
-			    		final WindowEvent closeEvent = new WindowEvent(Editor.this.stage,WindowEvent.WINDOW_CLOSE_REQUEST);
-
-			    		Editor.this.stage.fireEvent(closeEvent);
-
-			    	}
+			    	Editor.this.stop();
 
 				}
 				catch (final Throwable exception)
@@ -341,7 +517,10 @@ public final class Editor extends Application implements IEditor
 		if (items != null)
 		{
 
-			items.add(this.createExitMenuItem());
+			items.add(this.createSaveMenuItem()  );
+			items.add(this.createSaveAsMenuItem());
+			items.add(new SeparatorMenuItem()    );
+			items.add(this.createExitMenuItem()  );
 
 		}
 
@@ -471,6 +650,8 @@ public final class Editor extends Application implements IEditor
 
 			if (this.stage == null) return;
 
+			this.stage.setOnCloseRequest(this.onExitEventHandler);
+
 			final Screen screen = Screen.getPrimary();
 
 			if (screen == null) throw new Exception("Failed to retrieve screen instance");
@@ -510,6 +691,178 @@ public final class Editor extends Application implements IEditor
 
 	}
 
+    @Override
+	public final void stop() throws Exception
+    {
+
+    	super.stop();
+
+    	if (this.stage != null)
+    	{
+
+    		final WindowEvent event = new WindowEvent(this.stage,WindowEvent.WINDOW_CLOSE_REQUEST);
+
+    		this.stage.fireEvent(event);
+
+    	}
+
+    }
+
+ 	public final boolean confirm(final String title,final String header,final String message) throws Exception
+    {
+
+    	final Alert dialog = new Alert(AlertType.CONFIRMATION);
+
+    	dialog.setResizable(false);
+        dialog.setHeaderText(header == null ? "" : header.trim());
+        dialog.setTitle(title == null ? "" : title.trim());
+        dialog.setContentText(message == null ? "" : message.trim());
+
+        final ObservableList<ButtonType> buttonTypes = dialog.getButtonTypes();
+
+        if (buttonTypes == null) throw new Exception("Failed to retrieve button types instance");
+
+        buttonTypes.setAll(ButtonType.YES,ButtonType.NO);
+
+        final Optional<ButtonType> result = dialog.showAndWait();
+
+        return result.isPresent() && result.get() == ButtonType.YES;
+
+    }
+
+ 	private final void error(final String title,final String header,final String message)
+ 	{
+
+ 		try
+ 		{
+
+ 	    	final Alert dialog = new Alert(AlertType.ERROR);
+
+ 	    	dialog.setResizable(false);
+ 	        dialog.setHeaderText(header == null ? "" : header.trim());
+ 	        dialog.setTitle(title == null ? "" : title.trim());
+ 	        dialog.setContentText(message == null ? "" : message.trim());
+
+ 	        final ObservableList<ButtonType> buttonTypes = dialog.getButtonTypes();
+
+ 	        if (buttonTypes == null) throw new Exception("Failed to retrieve button types instance");
+
+ 	        buttonTypes.setAll(ButtonType.OK);
+
+ 	        dialog.showAndWait();
+
+ 		}
+ 		catch (final Throwable exception)
+ 		{
+
+ 			Logger.log(exception);
+
+ 		}
+
+ 	}
+
+ 	public final File saveAs()
+ 	{
+
+ 		try
+ 		{
+
+ 	 		if (this.stage == null) return null;
+
+ 	 		final FileChooser dialog = new FileChooser();
+
+ 	 		dialog.setInitialDirectory(this.defaultDirectory == null ? FileUtils.getUserHome() : this.defaultDirectory);
+
+ 	        final FileChooser.ExtensionFilter filter = new FileChooser.ExtensionFilter("Fichiers texte (*.txt)","*.txt");
+
+ 	        final ObservableList<ExtensionFilter> filters = dialog.getExtensionFilters();
+
+ 	        if (filters != null)
+ 	        {
+
+ 		        filters.add(filter);
+
+ 	        }
+
+ 	        final File file = dialog.showSaveDialog(this.stage);
+
+ 	        if (file == null) return null;
+
+ 	        this.defaultDirectory = file.getParentFile();
+
+ 	        if (this.defaultDirectory == null) throw new Exception("Failed to retrieve directory instance");
+
+ 	        if (this.defaultDirectory.exists())
+ 	        {
+
+ 	        	if (this.defaultDirectory.canWrite() == false) throw new Exception("Write access denied to directory " + this.defaultDirectory.getAbsolutePath());
+
+ 	        }
+ 	        else
+ 	        {
+
+ 	        	if (this.defaultDirectory.mkdirs() == false) throw new Exception("Failed to create directory " + this.defaultDirectory.getAbsolutePath());
+
+ 	        }
+
+ 	        String html = this.getHTML();
+
+ 	       html = html == null ? "" : html.trim();
+
+ 	        final Charset charset = this.getCharset();
+
+ 	        if (charset == null) throw new Exception("Failed to retrieve charset instance");
+
+ 	        final FileOutputStream outputStream = new FileOutputStream(file);
+
+ 	        try
+ 	        {
+
+ 	        	final OutputStreamWriter writer = new OutputStreamWriter(outputStream,charset);
+
+ 	        	try
+ 	        	{
+
+ 	        		if ("".equals(html) == false)
+ 	        		{
+
+ 	        			writer.write(html);
+
+ 	        		}
+
+ 	        	}
+ 	        	finally
+ 	        	{
+
+ 	        		writer.flush();
+ 	        		writer.close();
+
+ 	        	}
+
+ 	        }
+ 	        finally
+ 	        {
+
+ 	        	outputStream.close();
+
+ 	        }
+
+ 	        return file;
+
+ 		}
+ 		catch (final Throwable exception)
+ 		{
+
+ 			Logger.log(exception);
+
+ 			this.error("Erreur","Enregistrement fichier","L'enregistrement du fichier a échoué");
+
+ 			return null;
+
+ 		}
+
+ 	}
+
 	public static final void main(final String[] arguments)
 	{
 
@@ -532,4 +885,58 @@ public final class Editor extends Application implements IEditor
 
 	}
 
+    //==========================================================================
+    // CLASSE INTERNE
+    //==========================================================================
+
+	private final class OnExitEventHandler implements EventHandler<WindowEvent>
+	{
+
+		public OnExitEventHandler()
+		{
+
+			super();
+
+		}
+
+		@Override
+		public final void handle(final WindowEvent event)
+		{
+
+			try
+			{
+
+				if (event == null) return;
+
+				if (Editor.this.isClosing == false)
+				{
+
+					if (Editor.this.confirm("Fin programme","Fin de programme demandée","Fin de programme confirmée ?"))
+					{
+
+						Editor.this.isClosing = true;
+
+						Editor.this.stop();
+
+					}
+					else
+					{
+
+						event.consume();
+
+					}
+
+				}
+
+			}
+			catch (final Throwable exception)
+			{
+
+				Logger.log(exception);
+
+			}
+
+		}
+
+	}
 }

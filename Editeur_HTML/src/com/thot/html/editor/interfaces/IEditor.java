@@ -1,5 +1,8 @@
 package com.thot.html.editor.interfaces;
 
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+
 import javafx.geometry.Insets;
 
 public interface IEditor
@@ -10,6 +13,8 @@ public interface IEditor
 	public static final double VERTICAL_PADDING   = 8;
 	public static final double HORIZONTAL_SPACING = 10;
 	public static final double VERTICAL_SPACING   = 8;
+
+	public static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
 
 	public static final Insets GRID_PADDING = new Insets(VERTICAL_PADDING,HORIZONTAL_PADDING,VERTICAL_PADDING,HORIZONTAL_PADDING);
 
@@ -31,7 +36,9 @@ public interface IEditor
 
 		DESCRIPTION,
 		SEND_TO,
-		SUBJECT;
+		SUBJECT,
+		HTML_EDITOR,
+		CHARSET;
 
 	}
 
@@ -39,7 +46,9 @@ public interface IEditor
 	{
 
 		ABOUT,
-		EXIT;
+		EXIT,
+		SAVE,
+		SAVE_AS;
 
 	}
 
