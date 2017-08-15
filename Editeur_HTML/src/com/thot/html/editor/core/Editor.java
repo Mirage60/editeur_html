@@ -1,5 +1,7 @@
 package com.thot.html.editor.core;
 
+import com.thot.html.editor.interfaces.IEditor;
+
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -19,6 +21,7 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPane;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
@@ -26,50 +29,27 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
+import javafx.scene.paint.Color;
 import javafx.scene.web.HTMLEditor;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 
-public final class Editor extends Application
+public final class Editor extends Application implements IEditor
 {
 
-	private static final double RATIO              = 0.9;
-	private static final double HORIZONTAL_PADDING = 10;
-	private static final double VERTICAL_PADDING   = 8;
-	private static final double HORIZONTAL_SPACING = 10;
-	private static final double VERTICAL_SPACING   = 8;
-
-	private static final Insets GRID_PADDING = new Insets(VERTICAL_PADDING,HORIZONTAL_PADDING,VERTICAL_PADDING,HORIZONTAL_PADDING);
-
-	private static enum WIDGET_ID
+	private final UserPreferences userPreferences = new UserPreferences()
 	{
 
-		MENUBAR,
-		ACCORDION,
-		CENTER_AREA,
-		STATUS_BAR,
-		PREFERENCES_PANE,
-		METADATA_PANE,
-		MAIL_PANE;
+		@Override
+		public final Editor getEditor()
+		{
 
-	}
+			return Editor.this;
 
-	public static enum FIELD_ID
-	{
+		}
 
-		SEND_TO,
-		SUBJECT;
-
-	}
-
-	public static enum MENUITEM_ID
-	{
-
-		ABOUT,
-		EXIT;
-
-	}
+	};
 
 	private Stage stage = null;
 	private Scene scene = null;
@@ -89,6 +69,13 @@ public final class Editor extends Application
 	// METHODES
 	//=========================================================================
 
+	public final UserPreferences getUserPreferences()
+	{
+
+		return this.userPreferences;
+
+	}
+
 	private final StackPane createStackPane()
 	{
 
@@ -102,6 +89,9 @@ public final class Editor extends Application
 		{
 
 			final HTMLEditor htmlEditor = new HTMLEditor();
+
+			htmlEditor.setEffect(new DropShadow(5,4,4,Color.GRAY));
+			htmlEditor.setPadding(new Insets(0));
 
 		    children.add(htmlEditor);
 
@@ -436,8 +426,8 @@ public final class Editor extends Application
 
 			final Pane root = this.createRoot();
 
-			final double width  = bounds.getWidth()  * RATIO;
-			final double height = bounds.getHeight() * RATIO;
+			final double width  = bounds.getWidth()  * DIALOG_RATIO;
+			final double height = bounds.getHeight() * DIALOG_RATIO;
 			final double left   = bounds.getMinX() + (bounds.getWidth()  - width ) / 2;
 			final double top    = bounds.getMinY() + (bounds.getHeight() - height) / 2;
 
