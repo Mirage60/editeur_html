@@ -242,7 +242,9 @@ public final class Editor extends Application implements IEditor
 
 			final ObservableList<String> charsetItems = FXCollections.observableArrayList(list);
 
-			String value = DEFAULT_CHARSET == null ? "" : DEFAULT_CHARSET.name();
+			final Charset charset = this.userPreferences == null ? null : this.userPreferences.getCharset();
+
+			String value = (charset == null ? DEFAULT_CHARSET : charset).name();
 
 			value = value == null ? "" : value.trim();
 
@@ -695,14 +697,38 @@ public final class Editor extends Application implements IEditor
 	public final void stop() throws Exception
     {
 
-    	super.stop();
-
-    	if (this.stage != null)
+    	try
     	{
 
-    		final WindowEvent event = new WindowEvent(this.stage,WindowEvent.WINDOW_CLOSE_REQUEST);
+			final Charset charset = Editor.this.getCharset();
 
-    		this.stage.fireEvent(event);
+			if (charset == null ? false : Editor.this.userPreferences != null)
+			{
+
+				Editor.this.userPreferences.setCharset(charset);
+
+			}
+
+    	}
+    	catch (final Throwable exception)
+    	{
+
+    		Logger.log(exception);
+
+    	}
+    	finally
+    	{
+
+	    	super.stop();
+
+	    	if (this.stage != null)
+	    	{
+
+	    		final WindowEvent event = new WindowEvent(this.stage,WindowEvent.WINDOW_CLOSE_REQUEST);
+
+	    		this.stage.fireEvent(event);
+
+	    	}
 
     	}
 

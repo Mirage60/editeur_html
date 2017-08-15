@@ -1,5 +1,6 @@
 package com.thot.html.editor.core;
 
+import java.nio.charset.Charset;
 import java.util.UUID;
 import java.util.prefs.Preferences;
 
@@ -60,6 +61,50 @@ public abstract class UserPreferences implements IUserPreferences
     	{
 
     		this.store.putBoolean(PREFERENCES_ID.CONFIRM_ON_EXIT.name(),newValue);
+
+    	}
+    	catch (final Throwable exception)
+    	{
+
+    		Logger.log(exception);
+
+    	}
+
+    }
+
+    public final Charset getCharset()
+    {
+
+    	try
+    	{
+
+    		String encoding = this.store == null ? "" : this.store.get(PREFERENCES_ID.CHARSET.name(),"");
+
+    		encoding = encoding == null ? "" : encoding.trim();
+
+    		return "".equals(encoding) ? DEFAULT_CHARSET : Charset.forName(encoding);
+
+    	}
+    	catch (final Throwable exception)
+    	{
+
+    		Logger.log(exception);
+
+    		return DEFAULT_CHARSET;
+
+    	}
+
+    }
+
+    public final void setCharset(final Charset newValue)
+    {
+
+    	try
+    	{
+
+    		final String encoding = newValue == null ? "" : newValue.name();
+
+    		this.store.put(PREFERENCES_ID.CHARSET.name(),encoding == null ? "" : encoding.trim());
 
     	}
     	catch (final Throwable exception)
