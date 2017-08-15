@@ -9,6 +9,7 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
@@ -19,6 +20,8 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.SplitPane;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPane;
 import javafx.scene.effect.DropShadow;
@@ -51,8 +54,32 @@ public final class Editor extends Application implements IEditor
 
 	};
 
+
+	private static final ColumnConstraints leftConstraint = new ColumnConstraints();
+	private static final ColumnConstraints rightConstraint = new ColumnConstraints();
 	private Stage stage = null;
 	private Scene scene = null;
+
+	static
+	{
+
+		try
+		{
+
+			leftConstraint.setMinWidth   (100       );
+			leftConstraint.setHalignment (HPos.RIGHT);
+
+			rightConstraint.setHgrow(Priority.NEVER);
+
+		}
+		catch (final Throwable exception)
+		{
+
+			exception.printStackTrace();
+
+		}
+
+	}
 
 	//=========================================================================
 	// CONSTRUCTEURS
@@ -146,12 +173,30 @@ public final class Editor extends Application implements IEditor
 		titledPane.setPrefHeight (400                    );
 		titledPane.setUserData   (WIDGET_ID.METADATA_PANE);
 
-		final Pane gridPane = new GridPane();
+		final GridPane gridPane = new GridPane();
 
 		final ObservableList<Node> children = gridPane.getChildren();
 
 		if (children != null)
 		{
+
+			gridPane.setPadding (GRID_PADDING      );
+			gridPane.setHgap    (HORIZONTAL_SPACING);
+			gridPane.setVgap    (VERTICAL_SPACING  );
+
+			gridPane.getColumnConstraints().addAll(leftConstraint,rightConstraint);
+
+	        final Label descriptionLabel = new Label("Description :");
+
+	        descriptionLabel.setAlignment (Pos.CENTER_RIGHT        );
+	        descriptionLabel.setMaxWidth  (Double.POSITIVE_INFINITY);
+
+	        final TextArea descriptionField = new TextArea();
+
+	        descriptionField.setPrefWidth (400                 );
+	        descriptionField.setUserData  (FIELD_ID.DESCRIPTION);
+
+	        gridPane.addRow(0,descriptionLabel,descriptionField);
 
 		}
 
@@ -180,15 +225,6 @@ public final class Editor extends Application implements IEditor
 			gridPane.setPadding (GRID_PADDING      );
 			gridPane.setHgap    (HORIZONTAL_SPACING);
 			gridPane.setVgap    (VERTICAL_SPACING  );
-
-			final ColumnConstraints leftConstraint = new ColumnConstraints();
-
-			leftConstraint.setMinWidth(100);
-			leftConstraint.setHalignment(HPos.RIGHT);
-
-			final ColumnConstraints rightConstraint = new ColumnConstraints();
-
-			rightConstraint.setHgrow(Priority.NEVER);
 
 			gridPane.getColumnConstraints().addAll(leftConstraint,rightConstraint);
 
@@ -386,6 +422,28 @@ public final class Editor extends Application implements IEditor
 
 	}
 
+	public final SplitPane createSplitPane()
+	{
+
+		final SplitPane splitPane = new SplitPane();
+
+		splitPane.setOrientation(Orientation.HORIZONTAL);
+		splitPane.setDividerPositions(0.20);
+
+		final ObservableList<Node> items = splitPane.getItems();
+
+		if (items != null)
+		{
+
+			items.add(this.createAccordion());
+			items.add(this.createStackPane());
+
+		}
+
+		return splitPane;
+
+	}
+
 	private final Pane createRoot()
 	{
 
@@ -395,8 +453,7 @@ public final class Editor extends Application implements IEditor
 		borderPane.setPadding (new Insets(0));
 
 		borderPane.setTop    (this.createMenuBar()  );
-		borderPane.setLeft   (this.createAccordion());
-		borderPane.setCenter (this.createStackPane());
+		borderPane.setCenter (this.createSplitPane());
 		borderPane.setBottom (this.createStatusBar());
 
 		return borderPane;

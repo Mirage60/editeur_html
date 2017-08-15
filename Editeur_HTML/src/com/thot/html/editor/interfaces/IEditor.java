@@ -29,6 +29,7 @@ public interface IEditor
 	public static enum FIELD_ID
 	{
 
+		DESCRIPTION,
 		SEND_TO,
 		SUBJECT;
 

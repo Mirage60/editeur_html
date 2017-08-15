@@ -3,7 +3,6 @@ package com.thot.html.editor.core;
 import java.util.UUID;
 import java.util.prefs.Preferences;
 
-import com.thot.html.editor.interfaces.IConstants.PREFERENCES_ID;
 import com.thot.html.editor.interfaces.IUserPreferences;
 
 public abstract class UserPreferences implements IUserPreferences
